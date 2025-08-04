@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrimeTaxCalc - Income Tax Calculator 2024-25 | Free India Tax Calculator</title>
+    <meta name="description" content="Calculate your income tax for FY 2024-25 with PrimeTaxCalc - India's premier free online tax calculator. Support for old and new tax regime with detailed breakdown.">
+    <meta name="keywords" content="PrimeTaxCalc, income tax calculator, tax calculator 2024, new tax regime, old tax regime, india tax calculator, free tax calculator">
+    <meta name="author" content="PrimeTaxCalc">
+    <meta property="og:title" content="PrimeTaxCalc - Free Income Tax Calculator 2024-25">
+    <meta property="og:description" content="India's premier tax calculator for FY 2024-25. Calculate tax, compare regimes, download reports - all free!">
+    <meta property="og:image" content="https://primetaxcalc.com/assets/og-image.jpg">
+    <meta property="og:url" content="https://primetaxcalc.com">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://primetaxcalc.com">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="nav">
+                <div class="logo">
+                    <i class="fas fa-calculator"></i>
+                    <span>PrimeTaxCalc</span>
+                </div>
+                <nav class="nav-links">
+                    <a href="#calculator">Calculator</a>
+                    <a href="#features">Features</a>
+                    <a href="#guide">Tax Guide</a>
+                    <a href="#contact">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Income Tax Calculator 2024-25</h1>
+                <p>Calculate your income tax for FY 2024-25 with our advanced calculator. Compare old vs new tax regime and get detailed breakdown.</p>
+                <div class="hero-buttons">
+                    <button class="btn btn-primary" onclick="scrollToCalculator()">
+                        <i class="fas fa-calculator"></i>
+                        Calculate Now
+                    </button>
+                    <button class="btn btn-secondary">
+                        <i class="fas fa-book"></i>
+                        Tax Guide
+                    </button>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="calculator-preview">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Calculator Section -->
+    <section id="calculator" class="calculator-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Income Tax Calculator</h2>
+                <p>Enter your details to calculate tax liability</p>
+            </div>
+
+            <div class="calculator-container">
+                <div class="calculator-form">
+                    <div class="form-group">
+                        <label for="annualIncome">Annual Income (₹)</label>
+                        <input type="number" id="annualIncome" placeholder="Enter your annual income" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="age">Age Category</label>
+                        <select id="age">
+                            <option value="below60">Below 60 years</option>
+                            <option value="60to80">60-80 years (Senior Citizen)</option>
+                            <option value="above80">Above 80 years (Super Senior Citizen)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regime">Tax Regime</label>
+                        <select id="regime">
+                            <option value="new">New Tax Regime (FY 2024-25)</option>
+                            <option value="old">Old Tax Regime</option>
+                        </select>
+                    </div>
+
+                    <!-- Old Regime Deductions -->
+                    <div id="oldRegimeDeductions" class="deductions-section" style="display: none;">
+                        <h3>Deductions (Old Regime)</h3>
+                        <div class="deductions-grid">
+                            <div class="form-group">
+                                <label for="section80C">Section 80C (₹)</label>
+                                <input type="number" id="section80C" placeholder="Max ₹1,50,000" min="0" max="150000">
+                            </div>
+                            <div class="form-group">
+                                <label for="section80D">Section 80D (₹)</label>
+                                <input type="number" id="section80D" placeholder="Health Insurance" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="hra">HRA Exemption (₹)</label>
+                                <input type="number" id="hra" placeholder="House Rent Allowance" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="otherDeductions">Other Deductions (₹)</label>
+                                <input type="number" id="otherDeductions" placeholder="80E, 80G, etc." min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-calculate" onclick="calculateTax()">
+                        <i class="fas fa-calculator"></i>
+                        Calculate Tax
+                    </button>
+                </div>
+
+                <div class="results-panel" id="resultsPanel">
+                    <div class="results-header">
+                        <h3>Tax Calculation Results</h3>
+                        <div class="regime-badge" id="regimeBadge">New Regime</div>
+                    </div>
+                    
+                    <div class="tax-summary">
+                        <div class="summary-item">
+                            <span class="label">Gross Income</span>
+                            <span class="value" id="grossIncome">₹0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Total Deductions</span>
+                            <span class="value" id="totalDeductions">₹0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Taxable Income</span>
+                            <span class="value" id="taxableIncome">₹0</span>
+                        </div>
+                        <div class="summary-item highlight">
+                            <span class="label">Income Tax</span>
+                            <span class="value" id="incomeTax">₹0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Health & Education Cess (4%)</span>
+                            <span class="value" id="cess">₹0</span>
+                        </div>
+                        <div class="summary-item total">
+                            <span class="label">Total Tax Liability</span>
+                            <span class="value" id="totalTax">₹0</span>
+                        </div>
+                    </div>
+
+                    <div class="tax-breakdown" id="taxBreakdown">
+                        <h4>Tax Slab Breakdown</h4>
+                        <div class="breakdown-content" id="breakdownContent"></div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="downloadPDF()">
+                            <i class="fas fa-download"></i>
+                            Download Report
+                        </button>
+                        <button class="btn btn-outline" onclick="compareRegimes()">
+                            <i class="fas fa-exchange-alt"></i>
+                            Compare Regimes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section id="comparisonSection" class="comparison-section" style="display: none;">
+        <div class="container">
+            <h2>Tax Regime Comparison</h2>
+            <div class="comparison-table">
+                <div class="comparison-header">
+                    <div class="comparison-col">Feature</div>
+                    <div class="comparison-col old-regime">Old Regime</div>
+                    <div class="comparison-col new-regime">New Regime</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Total Tax</div>
+                    <div class="comparison-col old-regime" id="oldRegimeTax">₹0</div>
+                    <div class="comparison-col new-regime" id="newRegimeTax">₹0</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">After Tax Income</div>
+                    <div class="comparison-col old-regime" id="oldRegimeNet">₹0</div>
+                    <div class="comparison-col new-regime" id="newRegimeNet">₹0</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comparison-col">Tax Savings</div>
+                    <div class="comparison-col old-regime" id="oldSavings">-</div>
+                    <div class="comparison-col new-regime" id="newSavings">-</div>
+                </div>
+            </div>
+            <div class="recommendation" id="recommendation"></div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why Choose Our Calculator?</h2>
+                <p>Advanced features for accurate tax calculation</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Latest Tax Slabs</h3>
+                    <p>Updated with FY 2024-25 tax slabs and regulations</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h3>Regime Comparison</h3>
+                    <p>Compare old vs new tax regime to save maximum tax</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Detailed Breakdown</h3>
+                    <p>Get comprehensive tax slab wise calculation details</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h3>PDF Reports</h3>
+                    <p>Download detailed tax calculation reports</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Mobile Friendly</h3>
+                    <p>Works perfectly on all devices and screen sizes</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>100% Free</h3>
+                    <p>Completely free to use with no hidden charges</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ad Space -->
+    <section class="ad-section">
+        <div class="container">
+            <div class="ad-placeholder">
+                <p>Advertisement</p>
+                <div class="ad-content">
+                    <i class="fas fa-ad"></i>
+                    <span>Sponsored Content Area</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="logo">
+                        <i class="fas fa-calculator"></i>
+                        <span>TaxCalc Pro</span>
+                    </div>
+                    <p>Free online income tax calculator for FY 2024-25. Calculate your tax liability with our advanced calculator.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#calculator">Calculator</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#guide">Tax Guide</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#">Tax Slabs 2024-25</a></li>
+                        <li><a href="#">New vs Old Regime</a></li>
+                        <li><a href="#">Tax Saving Tips</a></li>
+                        <li><a href="#">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Disclaimer</a></li>
+                        <li><a href="#">About Us</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 PrimeTaxCalc. All rights reserved. | Made with ❤️ in India</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

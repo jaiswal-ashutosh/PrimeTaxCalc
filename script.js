@@ -1,86 +1,206 @@
-// Tax Calculator JavaScript
-
-// Tax slabs for FY 2024-25
-const TAX_SLABS = {
-    newRegime: {
-        below60: [
-            { min: 0, max: 300000, rate: 0 },
-            { min: 300000, max: 700000, rate: 5 },
-            { min: 700000, max: 1000000, rate: 10 },
-            { min: 1000000, max: 1200000, rate: 15 },
-            { min: 1200000, max: 1500000, rate: 20 },
-            { min: 1500000, max: Infinity, rate: 30 }
-        ],
-        '60to80': [
-            { min: 0, max: 300000, rate: 0 },
-            { min: 300000, max: 700000, rate: 5 },
-            { min: 700000, max: 1000000, rate: 10 },
-            { min: 1000000, max: 1200000, rate: 15 },
-            { min: 1200000, max: 1500000, rate: 20 },
-            { min: 1500000, max: Infinity, rate: 30 }
-        ],
-        above80: [
-            { min: 0, max: 500000, rate: 0 },
-            { min: 500000, max: 700000, rate: 5 },
-            { min: 700000, max: 1000000, rate: 10 },
-            { min: 1000000, max: 1200000, rate: 15 },
-            { min: 1200000, max: 1500000, rate: 20 },
-            { min: 1500000, max: Infinity, rate: 30 }
-        ]
-    },
-    oldRegime: {
-        below60: [
-            { min: 0, max: 250000, rate: 0 },
-            { min: 250000, max: 500000, rate: 5 },
-            { min: 500000, max: 1000000, rate: 20 },
-            { min: 1000000, max: Infinity, rate: 30 }
-        ],
-        '60to80': [
-            { min: 0, max: 300000, rate: 0 },
-            { min: 300000, max: 500000, rate: 5 },
-            { min: 500000, max: 1000000, rate: 20 },
-            { min: 1000000, max: Infinity, rate: 30 }
-        ],
-        above80: [
-            { min: 0, max: 500000, rate: 0 },
-            { min: 500000, max: 1000000, rate: 20 },
-            { min: 1000000, max: Infinity, rate: 30 }
-        ]
-    }
-};
-
-// Standard deduction for new regime
-const STANDARD_DEDUCTION = {
-    newRegime: 75000,
-    oldRegime: 0
-};
-
-// Initialize the calculator
-document.addEventListener('DOMContentLoaded', function() {
-    // Set up event listeners
-    setupEventListeners();
-    
-    // Initialize form
-    initializeForm();
-    
-    // Show initial empty results
-    showEmptyResults();
-});
-
-function setupEventListeners() {
-    // Regime change listener
-    document.getElementById('regime').addEventListener('change', handleRegimeChange);
-    
-    // Form input listeners for real-time calculation
-    const inputs = ['annualIncome', 'age', 'section80C', 'section80D', 'hra', 'otherDeductions'];
-    inputs.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('input', debounce(calculateTax, 500));
+function compareRegimes() {
+    try {
+        const incomeInput = document.getElementById('annualIncome');
+        const ageSelect = document.getElementById('age');
+        
+        if (!incomeInput || !ageSelect) {
+            alert('Form elements not found');
+            return;
         }
-    });
-    
-    // Smooth scrolling for navigation
+        
+        const income = parseFloat(incomeInput.value) || 0;
+        const age = ageSelect.value;
+        
+        if (income <= 0) {
+            alert('Please enter your annual income first');
+            return;
+        }
+        
+        // Calculate for both regimes
+        const newRegimeResult = performTaxCalculation(income, age, 'new');
+        const oldRegimeResult = performTaxCalculation(income, age, 'old');
+        
+        // Display comparison
+        updateElementText('newRegimeTax', `₹${formatNumber(newRegimeResult.totalTax)}`);
+        updateElementText('oldRegimeTax', `₹${formatNumber(oldRegimeResult.totalTax)}`);
+        updateElementText('newRegimeNet', `₹${formatNumber(newRegimeResult.netIncome)}`);
+        updateElementText('oldRegimeNet', `₹${formatNumber(oldRegimeResult.netIncome)}`);
+        
+        // Calculate savings
+        const newSavings = oldRegimeResult.totalTax - newRegimeResult.totalTax;
+        const oldSavings = newRegimeResult.totalTax - oldRegimeResult.totalTax;
+        
+        updateElementText('newSavings', newSavings > 0 ? `₹${formatNumber(newSavings)} saved` : newSavings < 0 ? `₹${formatNumber(Math.abs(newSavings))} extra` : 'Same');
+        updateElementText('oldSavings', oldSavings > 0 ? `₹${formatNumber(oldSavings)} saved` : oldSavings < 0 ? `₹${formatNumber(Math.abs(oldSavings))} extra` : 'Same');
+        
+        // Show recommendation
+        const recommendation = document.getElementById('recommendation');
+        if (recommendation) {
+            if (newRegimeResult.totalTax < oldRegimeResult.totalTax) {
+                recommendation.innerHTML = `
+                    <h4 style="color: #10b981; margin-bottom: 0.5rem;">💡 Recommendation: Choose New Tax Regime</h4>
+                    <p>You can save ₹${formatNumber(newSavings)} annually by choosing the new tax regime.</p>
+                `;
+            } else if (oldRegimeResult.totalTax < newRegimeResult.totalTax) {
+                recommendation.innerHTML = `
+                    <h4 style="color: #dc2626; margin-bottom: 0.5rem;">💡 Recommendation: Choose Old Tax Regime</h4>
+                    <p>You can save ₹${formatNumber(oldSavings)} annually by choosing the old tax regime with deductions.</p>
+                `;
+            } else {
+                recommendation.innerHTML = `
+                    <h4 style="color: #2563eb; margin-bottom: 0.5rem;">💡 Both regimes result in same tax</h4>
+                    <p>You can choose either regime as both result in the same tax liability.</p>
+                `;
+            }
+        }
+        
+        // Show comparison section
+        const comparisonSection = document.getElementById('comparisonSection');
+        if (comparisonSection) {
+            comparisonSection.style.display = 'block';
+            comparisonSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+    } catch (error) {
+        console.error('Error in compareRegimes:', error);
+        alert('Error comparing regimes. Please try again.');
+    }
+}
+
+function downloadPDF() {
+    try {
+        if (!window.currentCalculation) {
+            alert('Please calculate tax first');
+            return;
+        }
+        
+        const result = window.currentCalculation;
+        const currentDate = new Date().toLocaleDateString('en-IN');
+        
+        let content = `INCOME TAX CALCULATION REPORT - FY 2024-25
+=====================================================
+
+Generated by: PrimeTaxCalc.com
+Date: ${currentDate}
+Tax Regime: ${result.regime.toUpperCase()} REGIME
+
+INCOME DETAILS:
+--------------
+Gross Annual Income: ₹${formatNumber(result.grossIncome)}
+Total Deductions: ₹${formatNumber(result.totalDeductions)}
+Taxable Income: ₹${formatNumber(result.taxableIncome)}
+
+TAX CALCULATION:
+---------------
+Income Tax: ₹${formatNumber(result.incomeTax)}
+Health & Education Cess (4%): ₹${formatNumber(result.cess)}
+Total Tax Liability: ₹${formatNumber(result.totalTax)}
+Net Income After Tax: ₹${formatNumber(result.netIncome)}
+
+TAX SLAB BREAKDOWN:
+------------------`;
+
+        if (result.breakdown && result.breakdown.length > 0) {
+            result.breakdown.forEach(item => {
+                content += `\n${item.range}: ₹${formatNumber(item.tax)}`;
+            });
+        } else {
+            content += '\nNo tax applicable - Income below taxable limit';
+        }
+
+        content += `\n\nDISCLAIMER:
+-----------
+This calculation is for reference only. Please consult a qualified 
+tax professional for accurate tax planning and advice.
+
+Visit PrimeTaxCalc.com for latest tax calculations.
+        `;
+        
+        // Create and download file
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PrimeTaxCalc-Report-${new Date().getFullYear()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        // Track download
+        trackDownload();
+        
+    } catch (error) {
+        console.error('Error in downloadPDF:', error);
+        alert('Error generating report. Please try again.');
+    }
+}
+
+function scrollToCalculator() {
+    const calculator = document.getElementById('calculator');
+    if (calculator) {
+        calculator.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// Utility functions
+function formatNumber(num) {
+    if (isNaN(num)) return '0';
+    return new Intl.NumberFormat('en-IN').format(Math.round(num));
+}
+
+function updateElementText(id, text) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = text;
+    }
+}
+
+// Analytics tracking functions
+function trackCalculation() {
+    try {
+function trackCalculation() {
+    try {
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'tax_calculation', {
+                'event_category': 'engagement',
+                'event_label': 'calculate_tax'
+            });
+        }
+    } catch (error) {
+        console.log('Analytics tracking error:', error);
+    }
+}
+
+function trackDownload() {
+    try {
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'pdf_download', {
+                'event_category': 'engagement',
+                'event_label': 'download_report'
+            });
+        }
+    } catch (error) {
+        console.log('Analytics tracking error:', error);
+    }
+}
+
+function trackComparison() {
+    try {
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'regime_comparison', {
+                'event_category': 'engagement',
+                'event_label': 'compare_regimes'
+            });
+        }
+    } catch (error) {
+        console.log('Analytics tracking error:', error);
+    }
+}
+
+// Enhanced event listeners with tracking
+document.addEventListener('DOMContentLoaded', function() {
+    // Smooth scrolling for navigation links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -93,160 +213,590 @@ function setupEventListeners() {
             }
         });
     });
+
+    // Track page load
+    try {
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'page_view', {
+                'event_category': 'engagement',
+                'event_label': 'calculator_page'
+            });
+        }
+    } catch (error) {
+        console.log('Analytics tracking error:', error);
+    }
+});
+
+// Add enhanced tracking to main functions
+const originalCalculateTax = calculateTax;
+calculateTax = function() {
+    try {
+        originalCalculateTax.call(this);
+        trackCalculation();
+    } catch (error) {
+        console.error('Error in enhanced calculateTax:', error);
+    }
+};
+
+const originalCompareRegimes = compareRegimes;
+compareRegimes = function() {
+    try {
+        originalCompareRegimes.call(this);
+        trackComparison();
+    } catch (error) {
+        console.error('Error in enhanced compareRegimes:', error);
+    }
+};
+
+// Input validation and formatting
+function validateAndFormatInput(inputId, maxValue = null) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    input.addEventListener('input', function() {
+        // Remove non-numeric characters
+        let value = this.value.replace(/[^0-9]/g, '');
+        
+        // Apply max value if specified
+        if (maxValue && parseInt(value) > maxValue) {
+            value = maxValue.toString();
+        }
+        
+        // Format with commas for display
+        if (value) {
+            this.value = parseInt(value).toLocaleString('en-IN');
+        }
+    });
+    
+    input.addEventListener('blur', function() {
+        // Clean up formatting for calculation
+        this.value = this.value.replace(/,/g, '');
+        if (this.value) {
+            this.value = parseInt(this.value).toLocaleString('en-IN');
+        }
+    });
+    
+    input.addEventListener('focus', function() {
+        // Remove formatting for editing
+        this.value = this.value.replace(/,/g, '');
+    });
+}
+
+// Apply input validation on page load
+document.addEventListener('DOMContentLoaded', function() {
+    validateAndFormatInput('annualIncome');
+    validateAndFormatInput('section80C', 150000);
+    validateAndFormatInput('section80D');
+    validateAndFormatInput('hra');
+    validateAndFormatInput('otherDeductions');
+});
+
+// Performance optimization
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Error handling wrapper
+function safeExecute(func, errorMessage = 'An error occurred') {
+    return function(...args) {
+        try {
+            return func.apply(this, args);
+        } catch (error) {
+            console.error(`Error in ${func.name}:`, error);
+            showErrorMessage(errorMessage);
+        }
+    };
+}
+
+// Service Worker Registration for PWA (optional)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+                console.log('SW registration failed: ', registrationError);
+            });
+    });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + Enter to calculate
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        calculateTax();
+    }
+    
+    // Escape to clear form
+    if (e.key === 'Escape') {
+        const incomeInput = document.getElementById('annualIncome');
+        if (incomeInput && incomeInput === document.activeElement) {
+            incomeInput.value = '';
+            showEmptyResults();
+        }
+    }
+});
+
+// Auto-save functionality (using sessionStorage for temporary storage)
+function autoSave() {
+    try {
+        const formData = {
+            annualIncome: document.getElementById('annualIncome')?.value || '',
+            age: document.getElementById('age')?.value || 'below60',
+            regime: document.getElementById('regime')?.value || 'new',
+            section80C: document.getElementById('section80C')?.value || '',
+            section80D: document.getElementById('section80D')?.value || '',
+            hra: document.getElementById('hra')?.value || '',
+            otherDeductions: document.getElementById('otherDeductions')?.value || ''
+        };
+        
+        sessionStorage.setItem('primetaxcalc_formdata', JSON.stringify(formData));
+    } catch (error) {
+        console.log('Auto-save error:', error);
+    }
+}
+
+function autoRestore() {
+    try {
+        const savedData = sessionStorage.getItem('primetaxcalc_formdata');
+        if (savedData) {
+            const formData = JSON.parse(savedData);
+            
+            Object.keys(formData).forEach(key => {
+                const element = document.getElementById(key);
+                if (element && formData[key]) {
+                    element.value = formData[key];
+                }
+            });
+            
+            // Trigger regime change if needed
+            handleRegimeChange();
+        }
+    } catch (error) {
+        console.log('Auto-restore error:', error);
+    }
+}
+
+// Add auto-save listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore saved data
+    setTimeout(autoRestore, 100);
+    
+    // Add auto-save listeners to all inputs
+    const inputs = ['annualIncome', 'age', 'regime', 'section80C', 'section80D', 'hra', 'otherDeductions'];
+    inputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', autoSave);
+            element.addEventListener('input', debounce(autoSave, 1000));
+        }
+    });
+});
+
+// Print functionality
+function printResults() {
+    if (!window.currentCalculation) {
+        alert('Please calculate tax first');
+        return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    const result = window.currentCalculation;
+    
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>PrimeTaxCalc - Tax Calculation Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1, h2 { color: #2563eb; }
+                .summary { background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; }
+                .breakdown { margin-top: 20px; }
+                .footer { margin-top: 30px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <h1>PrimeTaxCalc - Income Tax Calculation</h1>
+            <p><strong>Generated:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
+            <p><strong>Tax Regime:</strong> ${result.regime.toUpperCase()}</p>
+            
+            <div class="summary">
+                <h2>Tax Summary</h2>
+                <p><strong>Gross Income:</strong> ₹${formatNumber(result.grossIncome)}</p>
+                <p><strong>Total Deductions:</strong> ₹${formatNumber(result.totalDeductions)}</p>
+                <p><strong>Taxable Income:</strong> ₹${formatNumber(result.taxableIncome)}</p>
+                <p><strong>Income Tax:</strong> ₹${formatNumber(result.incomeTax)}</p>
+                <p><strong>Cess (4%):</strong> ₹${formatNumber(result.cess)}</p>
+                <p><strong>Total Tax:</strong> ₹${formatNumber(result.totalTax)}</p>
+                <p><strong>Net Income:</strong> ₹${formatNumber(result.netIncome)}</p>
+            </div>
+            
+            <div class="breakdown">
+                <h2>Tax Slab Breakdown</h2>
+                ${result.breakdown.map(item => 
+                    `<p>${item.range}: ₹${formatNumber(item.tax)}</p>`
+                ).join('')}
+            </div>
+            
+            <div class="footer">
+                <p>This calculation is for reference only. Please consult a tax professional for advice.</p>
+                <p>Generated by PrimeTaxCalc.com - India's Premier Tax Calculator</p>
+            </div>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.print();
+}
+
+console.log('PrimeTaxCalc Enhanced Calculator Loaded Successfully! 🚀');// PrimeTaxCalc - Enhanced Tax Calculator JavaScript
+
+// Tax slabs for FY 2024-25
+const TAX_SLABS = {
+    newRegime: {
+        below60: [
+            { min: 0, max: 300000, rate: 0 },
+            { min: 300001, max: 700000, rate: 5 },
+            { min: 700001, max: 1000000, rate: 10 },
+            { min: 1000001, max: 1200000, rate: 15 },
+            { min: 1200001, max: 1500000, rate: 20 },
+            { min: 1500001, max: Infinity, rate: 30 }
+        ],
+        '60to80': [
+            { min: 0, max: 300000, rate: 0 },
+            { min: 300001, max: 700000, rate: 5 },
+            { min: 700001, max: 1000000, rate: 10 },
+            { min: 1000001, max: 1200000, rate: 15 },
+            { min: 1200001, max: 1500000, rate: 20 },
+            { min: 1500001, max: Infinity, rate: 30 }
+        ],
+        above80: [
+            { min: 0, max: 500000, rate: 0 },
+            { min: 500001, max: 700000, rate: 5 },
+            { min: 700001, max: 1000000, rate: 10 },
+            { min: 1000001, max: 1200000, rate: 15 },
+            { min: 1200001, max: 1500000, rate: 20 },
+            { min: 1500001, max: Infinity, rate: 30 }
+        ]
+    },
+    oldRegime: {
+        below60: [
+            { min: 0, max: 250000, rate: 0 },
+            { min: 250001, max: 500000, rate: 5 },
+            { min: 500001, max: 1000000, rate: 20 },
+            { min: 1000001, max: Infinity, rate: 30 }
+        ],
+        '60to80': [
+            { min: 0, max: 300000, rate: 0 },
+            { min: 300001, max: 500000, rate: 5 },
+            { min: 500001, max: 1000000, rate: 20 },
+            { min: 1000001, max: Infinity, rate: 30 }
+        ],
+        above80: [
+            { min: 0, max: 500000, rate: 0 },
+            { min: 500001, max: 1000000, rate: 20 },
+            { min: 1000001, max: Infinity, rate: 30 }
+        ]
+    }
+};
+
+// Standard deduction for new regime
+const STANDARD_DEDUCTION = {
+    newRegime: 75000,
+    oldRegime: 0
+};
+
+// Global variables
+let calculationTimeout;
+
+// Initialize the calculator
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('PrimeTaxCalc initialized');
+    setupEventListeners();
+    initializeForm();
+    showEmptyResults();
+});
+
+function setupEventListeners() {
+    // Regime change listener
+    const regimeSelect = document.getElementById('regime');
+    if (regimeSelect) {
+        regimeSelect.addEventListener('change', handleRegimeChange);
+    }
+    
+    // Real-time calculation with proper debouncing
+    const incomeInput = document.getElementById('annualIncome');
+    if (incomeInput) {
+        incomeInput.addEventListener('input', function() {
+            clearTimeout(calculationTimeout);
+            calculationTimeout = setTimeout(calculateTax, 800);
+        });
+    }
+    
+    // Other input listeners
+    const inputs = ['age', 'section80C', 'section80D', 'hra', 'otherDeductions'];
+    inputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', function() {
+                clearTimeout(calculationTimeout);
+                calculationTimeout = setTimeout(calculateTax, 300);
+            });
+        }
+    });
+    
+    // Calculate button
+    const calculateBtn = document.querySelector('.btn-calculate');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            calculateTax();
+        });
+    }
 }
 
 function initializeForm() {
-    // Set default values
-    document.getElementById('annualIncome').value = '';
-    document.getElementById('age').value = 'below60';
-    document.getElementById('regime').value = 'new';
+    const incomeInput = document.getElementById('annualIncome');
+    const ageSelect = document.getElementById('age');
+    const regimeSelect = document.getElementById('regime');
     
-    // Hide old regime deductions initially
+    if (incomeInput) incomeInput.value = '';
+    if (ageSelect) ageSelect.value = 'below60';
+    if (regimeSelect) regimeSelect.value = 'new';
+    
     handleRegimeChange();
 }
 
 function handleRegimeChange() {
-    const regime = document.getElementById('regime').value;
+    const regime = document.getElementById('regime')?.value || 'new';
     const deductionsSection = document.getElementById('oldRegimeDeductions');
     const regimeBadge = document.getElementById('regimeBadge');
     
-    if (regime === 'old') {
-        deductionsSection.style.display = 'block';
-        regimeBadge.textContent = 'Old Regime';
-        regimeBadge.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
-    } else {
-        deductionsSection.style.display = 'none';
-        regimeBadge.textContent = 'New Regime';
-        regimeBadge.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    if (deductionsSection) {
+        if (regime === 'old') {
+            deductionsSection.style.display = 'block';
+        } else {
+            deductionsSection.style.display = 'none';
+        }
     }
     
-    // Recalculate if income is entered
-    if (document.getElementById('annualIncome').value) {
-        calculateTax();
+    if (regimeBadge) {
+        if (regime === 'old') {
+            regimeBadge.textContent = 'Old Regime';
+            regimeBadge.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+        } else {
+            regimeBadge.textContent = 'New Regime';
+            regimeBadge.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        }
+    }
+    
+    // Recalculate if income exists
+    const income = parseFloat(document.getElementById('annualIncome')?.value || 0);
+    if (income > 0) {
+        setTimeout(calculateTax, 100);
     }
 }
 
 function calculateTax() {
-    const income = parseFloat(document.getElementById('annualIncome').value) || 0;
-    const age = document.getElementById('age').value;
-    const regime = document.getElementById('regime').value;
-    
-    if (income <= 0) {
-        showEmptyResults();
-        return;
-    }
-    
-    // Show loading state
-    const calculateBtn = document.querySelector('.btn-calculate');
-    calculateBtn.classList.add('loading');
-    
-    setTimeout(() => {
+    try {
+        const incomeInput = document.getElementById('annualIncome');
+        const ageSelect = document.getElementById('age');
+        const regimeSelect = document.getElementById('regime');
+        
+        if (!incomeInput || !ageSelect || !regimeSelect) {
+            console.error('Required form elements not found');
+            return;
+        }
+        
+        const income = parseFloat(incomeInput.value) || 0;
+        const age = ageSelect.value;
+        const regime = regimeSelect.value;
+        
+        console.log('Calculating tax for:', { income, age, regime });
+        
+        if (income <= 0) {
+            showEmptyResults();
+            return;
+        }
+        
+        // Show loading state briefly
+        showLoadingState(true);
+        
+        // Perform calculation
         const result = performTaxCalculation(income, age, regime);
-        displayResults(result);
-        calculateBtn.classList.remove('loading');
-    }, 300);
+        
+        // Display results
+        setTimeout(() => {
+            displayResults(result);
+            showLoadingState(false);
+        }, 200);
+        
+    } catch (error) {
+        console.error('Error in calculateTax:', error);
+        showLoadingState(false);
+        showErrorMessage('Calculation error. Please try again.');
+    }
 }
 
 function performTaxCalculation(income, age, regime) {
-    // Get deductions
-    let totalDeductions = 0;
-    
-    if (regime === 'new') {
-        totalDeductions = STANDARD_DEDUCTION.newRegime;
-    } else {
-        const section80C = Math.min(parseFloat(document.getElementById('section80C').value) || 0, 150000);
-        const section80D = parseFloat(document.getElementById('section80D').value) || 0;
-        const hra = parseFloat(document.getElementById('hra').value) || 0;
-        const otherDeductions = parseFloat(document.getElementById('otherDeductions').value) || 0;
+    try {
+        // Get deductions based on regime
+        let totalDeductions = 0;
         
-        totalDeductions = section80C + section80D + hra + otherDeductions;
-    }
-    
-    // Calculate taxable income
-    const taxableIncome = Math.max(0, income - totalDeductions);
-    
-    // Get tax slabs
-    const slabs = TAX_SLABS[regime][age];
-    
-    // Calculate tax
-    let tax = 0;
-    const breakdown = [];
-    
-    for (const slab of slabs) {
-        if (taxableIncome > slab.min) {
-            const taxableAmount = Math.min(taxableIncome, slab.max) - slab.min;
-            const slabTax = (taxableAmount * slab.rate) / 100;
-            tax += slabTax;
+        if (regime === 'new') {
+            totalDeductions = STANDARD_DEDUCTION.newRegime;
+        } else {
+            const section80C = Math.min(parseFloat(document.getElementById('section80C')?.value || 0), 150000);
+            const section80D = parseFloat(document.getElementById('section80D')?.value || 0);
+            const hra = parseFloat(document.getElementById('hra')?.value || 0);
+            const otherDeductions = parseFloat(document.getElementById('otherDeductions')?.value || 0);
             
-            if (slabTax > 0) {
-                breakdown.push({
-                    range: slab.max === Infinity ? 
-                        `₹${formatNumber(slab.min)}+ @ ${slab.rate}%` : 
-                        `₹${formatNumber(slab.min)} - ₹${formatNumber(slab.max)} @ ${slab.rate}%`,
-                    tax: slabTax
-                });
+            totalDeductions = section80C + section80D + hra + otherDeductions;
+        }
+        
+        // Calculate taxable income
+        const taxableIncome = Math.max(0, income - totalDeductions);
+        
+        // Get appropriate tax slabs
+        const slabs = TAX_SLABS[regime]?.[age];
+        if (!slabs) {
+            throw new Error('Invalid regime or age category');
+        }
+        
+        // Calculate tax slab-wise
+        let tax = 0;
+        const breakdown = [];
+        
+        for (const slab of slabs) {
+            if (taxableIncome > slab.min) {
+                const applicableIncome = Math.min(taxableIncome, slab.max) - slab.min;
+                const slabTax = (applicableIncome * slab.rate) / 100;
+                tax += slabTax;
+                
+                if (slabTax > 0) {
+                    breakdown.push({
+                        range: slab.max === Infinity ? 
+                            `₹${formatNumber(slab.min)}+ @ ${slab.rate}%` : 
+                            `₹${formatNumber(slab.min)} - ₹${formatNumber(slab.max)} @ ${slab.rate}%`,
+                        tax: slabTax,
+                        rate: slab.rate
+                    });
+                }
             }
         }
+        
+        // Calculate cess (4% on income tax)
+        const cess = tax * 0.04;
+        const totalTax = tax + cess;
+        const netIncome = income - totalTax;
+        
+        return {
+            grossIncome: income,
+            totalDeductions: totalDeductions,
+            taxableIncome: taxableIncome,
+            incomeTax: tax,
+            cess: cess,
+            totalTax: totalTax,
+            netIncome: netIncome,
+            breakdown: breakdown,
+            regime: regime,
+            age: age
+        };
+        
+    } catch (error) {
+        console.error('Error in performTaxCalculation:', error);
+        throw error;
     }
-    
-    // Calculate cess (4% on tax)
-    const cess = tax * 0.04;
-    const totalTax = tax + cess;
-    
-    return {
-        grossIncome: income,
-        totalDeductions: totalDeductions,
-        taxableIncome: taxableIncome,
-        incomeTax: tax,
-        cess: cess,
-        totalTax: totalTax,
-        netIncome: income - totalTax,
-        breakdown: breakdown,
-        regime: regime
-    };
 }
 
 function displayResults(result) {
-    // Update summary
-    document.getElementById('grossIncome').textContent = `₹${formatNumber(result.grossIncome)}`;
-    document.getElementById('totalDeductions').textContent = `₹${formatNumber(result.totalDeductions)}`;
-    document.getElementById('taxableIncome').textContent = `₹${formatNumber(result.taxableIncome)}`;
-    document.getElementById('incomeTax').textContent = `₹${formatNumber(result.incomeTax)}`;
-    document.getElementById('cess').textContent = `₹${formatNumber(result.cess)}`;
-    document.getElementById('totalTax').textContent = `₹${formatNumber(result.totalTax)}`;
-    
-    // Update breakdown
-    const breakdownContent = document.getElementById('breakdownContent');
-    breakdownContent.innerHTML = '';
-    
-    if (result.breakdown.length === 0) {
-        breakdownContent.innerHTML = '<p style="color: #10b981; font-weight: 500;">No tax applicable - Income below taxable limit</p>';
-    } else {
-        result.breakdown.forEach(item => {
-            const breakdownItem = document.createElement('div');
-            breakdownItem.className = 'breakdown-item';
-            breakdownItem.innerHTML = `
-                <span>${item.range}</span>
-                <span>₹${formatNumber(item.tax)}</span>
-            `;
-            breakdownContent.appendChild(breakdownItem);
-        });
+    try {
+        // Update summary values
+        updateElementText('grossIncome', `₹${formatNumber(result.grossIncome)}`);
+        updateElementText('totalDeductions', `₹${formatNumber(result.totalDeductions)}`);
+        updateElementText('taxableIncome', `₹${formatNumber(result.taxableIncome)}`);
+        updateElementText('incomeTax', `₹${formatNumber(result.incomeTax)}`);
+        updateElementText('cess', `₹${formatNumber(result.cess)}`);
+        updateElementText('totalTax', `₹${formatNumber(result.totalTax)}`);
+        
+        // Update tax breakdown
+        const breakdownContent = document.getElementById('breakdownContent');
+        if (breakdownContent) {
+            breakdownContent.innerHTML = '';
+            
+            if (result.breakdown.length === 0) {
+                breakdownContent.innerHTML = '<p style="color: #10b981; font-weight: 500; padding: 1rem; text-align: center;">🎉 No tax applicable - Income below taxable limit!</p>';
+            } else {
+                result.breakdown.forEach(item => {
+                    const breakdownItem = document.createElement('div');
+                    breakdownItem.className = 'breakdown-item';
+                    breakdownItem.innerHTML = `
+                        <span>${item.range}</span>
+                        <span style="font-weight: 600; color: #dc2626;">₹${formatNumber(item.tax)}</span>
+                    `;
+                    breakdownContent.appendChild(breakdownItem);
+                });
+            }
+        }
+        
+        // Show results panel
+        const resultsPanel = document.getElementById('resultsPanel');
+        if (resultsPanel) {
+            resultsPanel.style.display = 'block';
+        }
+        
+        // Store results globally for other functions
+        window.currentCalculation = result;
+        
+        console.log('Results displayed successfully:', result);
+        
+    } catch (error) {
+        console.error('Error in displayResults:', error);
+        showErrorMessage('Error displaying results. Please try again.');
     }
-    
-    // Show results panel
-    document.getElementById('resultsPanel').style.display = 'block';
-    
-    // Store results for comparison
-    window.currentCalculation = result;
+}
+
+function showLoadingState(show) {
+    const calculateBtn = document.querySelector('.btn-calculate');
+    if (calculateBtn) {
+        if (show) {
+            calculateBtn.classList.add('loading');
+            calculateBtn.disabled = true;
+        } else {
+            calculateBtn.classList.remove('loading');
+            calculateBtn.disabled = false;
+        }
+    }
 }
 
 function showEmptyResults() {
     const fields = ['grossIncome', 'totalDeductions', 'taxableIncome', 'incomeTax', 'cess', 'totalTax'];
     fields.forEach(field => {
-        document.getElementById(field).textContent = '₹0';
+        updateElementText(field, '₹0');
     });
     
-    document.getElementById('breakdownContent').innerHTML = '<p style="color: #64748b;">Enter your income to see tax breakdown</p>';
+    const breakdownContent = document.getElementById('breakdownContent');
+    if (breakdownContent) {
+        breakdownContent.innerHTML = '<p style="color: #64748b; padding: 1rem; text-align: center;">💡 Enter your annual income to see detailed tax breakdown</p>';
+    }
+}
+
+function showErrorMessage(message) {
+    const breakdownContent = document.getElementById('breakdownContent');
+    if (breakdownContent) {
+        breakdownContent.innerHTML = `<p style="color: #dc2626; padding: 1rem; text-align: center;">⚠️ ${message}</p>`;
+    }
 }
 
 function compareRegimes() {

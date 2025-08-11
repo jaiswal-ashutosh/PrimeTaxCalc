@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://jaiswal-ashutosh.github.io/PrimeTaxCalc/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Block assets that don't need indexing
+Disallow: /assets/
+Disallow: /*.js$
+Disallow: /*.css$

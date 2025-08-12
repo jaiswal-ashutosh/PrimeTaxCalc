@@ -1,13 +1,21 @@
 User-agent: *
 Allow: /
 
-# Sitemaps
+# Sitemap location
 Sitemap: https://jaiswal-ashutosh.github.io/PrimeTaxCalc/sitemap.xml
 
-# Crawl-delay
-Crawl-delay: 1
+# Block access to any hidden files
+Disallow: /.*
 
-# Block assets that don't need indexing
-Disallow: /assets/
-Disallow: /*.js$
-Disallow: /*.css$
+# Allow all CSS and JS files
+Allow: *.css
+Allow: *.js
+Allow: *.png
+Allow: *.jpg
+Allow: *.jpeg
+Allow: *.gif
+Allow: *.svg
+Allow: *.ico
+
+# Crawl-delay (optional - helps prevent server overload)
+Crawl-delay: 1
